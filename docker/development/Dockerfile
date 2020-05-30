@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM node:12-buster-slim
 
 LABEL maintainer="Michael Mayer <michael@liquidbytes.net>"
 
@@ -7,16 +7,17 @@ ARG BUILD_TAG
 ENV DEBIAN_FRONTEND noninteractive
 
 # Configure apt-get
-RUN echo 'Acquire::Retries "10";' > /etc/apt/apt.conf.d/80retry
-RUN echo 'APT::Install-Recommends "false";' > /etc/apt/apt.conf.d/80recommends
-RUN echo 'APT::Install-Suggests "false";' > /etc/apt/apt.conf.d/80suggests
-RUN echo 'APT::Get::Assume-Yes "true";' > /etc/apt/apt.conf.d/80forceyes
-RUN echo 'APT::Get::Fix-Missing "true";' > /etc/apt/apt.conf.d/80fixmissin
+RUN echo 'Acquire::Retries "10";' > /etc/apt/apt.conf.d/80retry && \
+    echo 'APT::Install-Recommends "false";' > /etc/apt/apt.conf.d/80recommends && \
+    echo 'APT::Install-Suggests "false";' > /etc/apt/apt.conf.d/80suggests && \
+    echo 'APT::Get::Assume-Yes "true";' > /etc/apt/apt.conf.d/80forceyes && \
+    echo 'APT::Get::Fix-Missing "true";' > /etc/apt/apt.conf.d/80fixmissin
 
 # Install dev / build dependencies
-RUN apt-get update && apt-get upgrade && \
+RUN apt-get update && \
     apt-get install \
     build-essential \
+    ca-certificates \
     curl \
     chrpath \
     libssl-dev \
@@ -29,35 +30,33 @@ RUN apt-get update && apt-get upgrade && \
     libpng-dev \
     libzmq3-dev \
     pkg-config \
-    software-properties-common \
     rsync \
     unzip \
     zip \
     g++ \
     gcc \
     libc6-dev \
-    gpg-agent \
-    apt-utils \
+    gnupg2 \
     make \
     nano \
     wget \
     git \
-    mysql-client \
+    default-mysql-client \
     tzdata \
     gconf-service \
-    chromium-browser \
-    firefox \
     libheif-examples \
     exiftool \
     ffmpeg
 
 # Install RAW to JPEG converter
-RUN sh -c "echo 'deb http://download.opensuse.org/repositories/graphics:/darktable/xUbuntu_18.04/ /' > /etc/apt/sources.list.d/graphics:darktable.list" && \
-    wget -qO - https://download.opensuse.org/repositories/graphics:darktable/xUbuntu_18.04/Release.key | apt-key add - && \
+# Suppress an apt-key warning about standard out not being a terminal
+ENV APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=true
+RUN sh -c "echo 'deb http://download.opensuse.org/repositories/graphics:/darktable/Debian_10/ /' > /etc/apt/sources.list.d/graphics:darktable.list" && \
+    curl -Ls https://download.opensuse.org/repositories/graphics:/darktable/Debian_10/Release.key | (OUT=$(apt-key add - 2>&1) || echo $OUT) && \
     apt-get update && \
     apt-get install darktable && \
-    apt-get upgrade && \
-    apt-get dist-upgrade
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install & configure TensorFlow for C,
 # see https://www.tensorflow.org/install/lang_c
@@ -72,14 +71,7 @@ RUN curl -L \
    tar -C "/usr" -xz
 RUN ldconfig
 
-# Install NodeJS
-RUN curl -sL https://deb.nodesource.com/setup_12.x | bash -
-RUN apt-get update && \
-    apt-get install nodejs && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install and configure NodeJS Package Manager (npm)
+# Configure NodeJS Package Manager (npm)
 ENV NODE_ENV production
 RUN npm install --unsafe-perm=true --allow-root -g npm testcafe chromedriver
 RUN npm config set cache ~/.cache/npm
@@ -104,10 +96,11 @@ ENV GO111MODULE on
 RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
 
 # Download TensorFlow model and test files
-RUN rm -rf /tmp/* && mkdir -p /tmp/photoprism
-RUN wget "https://dl.photoprism.org/tensorflow/nsfw.zip?${BUILD_TAG}" -O /tmp/photoprism/nsfw.zip
-RUN wget "https://dl.photoprism.org/tensorflow/nasnet.zip?${BUILD_TAG}" -O /tmp/photoprism/nasnet.zip
-RUN wget "https://dl.photoprism.org/fixtures/testdata.zip?${BUILD_TAG}" -O /tmp/photoprism/testdata.zip
+RUN rm -rf /tmp/* && \
+    mkdir -p /tmp/photoprism && \
+    wget "https://dl.photoprism.org/tensorflow/nsfw.zip?${BUILD_TAG}" -O /tmp/photoprism/nsfw.zip && \
+    wget "https://dl.photoprism.org/tensorflow/nasnet.zip?${BUILD_TAG}" -O /tmp/photoprism/nasnet.zip && \
+    wget "https://dl.photoprism.org/fixtures/testdata.zip?${BUILD_TAG}" -O /tmp/photoprism/testdata.zip
 
 # Install additional tools for development
 RUN env GO111MODULE=off /usr/local/go/bin/go get -u golang.org/x/tools/cmd/goimports
