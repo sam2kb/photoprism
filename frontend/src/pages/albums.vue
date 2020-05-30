@@ -41,12 +41,24 @@
             <v-container grid-list-xs fluid class="pa-2 p-albums p-albums-cards">
                 <v-card v-if="results.length === 0" class="p-albums-empty secondary-light lighten-1 ma-1" flat>
                     <v-card-title primary-title>
-                        <div>
+                        <div v-if="staticFilter.type === 'moment'">
                             <h3 class="title mb-3">
-                                {{$gettext("No albums matched your search")}}
+                                <translate key=">No moments">No moments matched your search</translate>
                             </h3>
                             <div>
-                                {{$gettext("Try again using a different term or create a new album from a selection in Photos.")}}
+                                <translate key=">Wait until">Wait until PhotoPrism has analyzed your library or try
+                                    again using a different term.
+                                </translate>
+                            </div>
+                        </div>
+                        <div v-else>
+                            <h3 class="title mb-3">
+                                <translate key=">No albums">No albums matched your search</translate>
+                            </h3>
+                            <div>
+                                <translate key="Try again">Try again using a different term or create a new album from a
+                                    selection in Photos.
+                                </translate>
                             </div>
                         </div>
                     </v-card-title>
@@ -64,7 +76,7 @@
                                     @contextmenu="onContextMenu($event, index)"
                                     :dark="selection.includes(album.UID)"
                                     :class="selection.includes(album.UID) ? 'elevation-10 ma-0 accent darken-1 white--text' : 'elevation-0 ma-1 accent lighten-3'"
-                                    :to="{name: 'album', params: {uid: album.UID, slug: album.Slug}}"
+                                    :to="{name: albumRoute(), params: {uid: album.UID, slug: album.Slug}}"
                             >
                                 <v-img
                                         :src="album.thumbnailUrl('tile_500')"
@@ -191,6 +203,13 @@
             };
         },
         methods: {
+            albumRoute() {
+                if(this.routeName === "moments") {
+                    return "moment";
+                }
+
+                return "album";
+            },
             selectRange(rangeEnd, models) {
                 if (!models || !models[rangeEnd] || !(models[rangeEnd] instanceof RestModel)) {
                     console.warn("selectRange() - invalid arguments:", rangeEnd, models);
@@ -246,7 +265,7 @@
                     ev.preventDefault();
                     ev.stopPropagation();
 
-                    if(this.results[index]) {
+                    if (this.results[index]) {
                         this.selectRange(index, this.results);
                     }
                 }

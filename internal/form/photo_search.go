@@ -7,6 +7,7 @@ import (
 // PhotoSearch represents search form fields for "/api/v1/photos".
 type PhotoSearch struct {
 	Query     string    `form:"q"`
+	Filter    string    `form:"filter"`
 	ID        string    `form:"id"`
 	Type      string    `form:"type"`
 	Path      string    `form:"path"`
@@ -31,9 +32,11 @@ type PhotoSearch struct {
 	Location  bool      `form:"location"`
 	Album     string    `form:"album"`
 	Label     string    `form:"label"`
-	Country   string    `form:"country"`
-	Year      int       `form:"year"`
-	Month     int       `form:"month"`
+	Category  string    `form:"category"` // Moments
+	Country   string    `form:"country"`  // Moments
+	State     string    `form:"state"`    // Moments
+	Year      int       `form:"year"`     // Moments
+	Month     int       `form:"month"`    // Moments
 	Color     string    `form:"color"`
 	Quality   int       `form:"quality"`
 	Review    bool      `form:"review"`
@@ -60,13 +63,21 @@ func (f *PhotoSearch) SetQuery(q string) {
 }
 
 func (f *PhotoSearch) ParseQueryString() error {
-	err := ParseQueryString(f)
+	if err := ParseQueryString(f); err != nil {
+		return err
+	}
 
 	if f.Path == "" && f.Folder != "" {
 		f.Path = f.Folder
 	}
 
-	return err
+	if f.Filter != "" {
+		if err := Unserialize(f, f.Filter); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Serialize returns a string containing non-empty fields and values of a struct.

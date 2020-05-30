@@ -125,10 +125,10 @@
             openLocation(index) {
                 const photo = this.results[index];
 
-                if (photo.LocUID) {
-                    this.$router.push({name: "place", params: {q: "s2:" + photo.LocUID}});
-                } else if (photo.PlaceUID.length > 3) {
-                    this.$router.push({name: "place", params: {q: "s2:" + photo.PlaceUID}});
+                if (photo.LocationID) {
+                    this.$router.push({name: "place", params: {q: "s2:" + photo.LocationID}});
+                } else if (photo.PlaceID.length > 3) {
+                    this.$router.push({name: "place", params: {q: "s2:" + photo.PlaceID}});
                 }
             },
             editPhoto(index) {
@@ -171,6 +171,7 @@
                     count: count,
                     offset: offset,
                     album: this.uid,
+                    filter: this.model.Filter ? this.model.Filter : "",
                     merged: true,
                 };
 
@@ -227,6 +228,7 @@
                     count: this.pageSize,
                     offset: this.offset,
                     album: this.uid,
+                    filter: this.model.Filter ? this.model.Filter : "",
                     merged: true,
                 };
 
@@ -294,7 +296,7 @@
                 return this.model.find(this.uid).then(m => {
                     this.model = m;
 
-                    this.filter.order = m.AlbumOrder;
+                    this.filter.order = m.Order;
                     window.document.title = `PhotoPrism: ${this.model.Title}`;
 
                     return Promise.resolve(this.model)
@@ -322,8 +324,8 @@
                         this.dirty = true;
                         this.scrollDisabled = false;
 
-                        if (this.filter.order !== this.model.AlbumOrder) {
-                            this.filter.order = this.model.AlbumOrder;
+                        if (this.filter.order !== this.model.Order) {
+                            this.filter.order = this.model.Order;
                             this.updateQuery();
                         } else {
                             this.loadMore();
